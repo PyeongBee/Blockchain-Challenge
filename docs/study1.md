@@ -1,0 +1,223 @@
+# 블록체인 토큰 만들기 스터디 노트 #1
+
+ERC-20 토큰을 처음 만들어보면서 질문하고 답변받은 내용을 정리한 노트.
+
+---
+
+## 1. 코인 vs 토큰
+
+- **코인(BTC, ETH)**: 자체 블록체인을 가진 네이티브 화폐.
+- **토큰(USDT, UNI 등)**: 이미 존재하는 블록체인 위에 **스마트컨트랙트(프로그램)**로 발행되는 자산. 새 체인을 만들 필요 없이 기존 체인에 코드만 올리면 됨.
+
+"토큰을 만든다" = "이더리움(또는 다른 체인) 위에 토큰 로직이 담긴 스마트컨트랙트를 배포한다."
+
+---
+
+## 2. ERC-20이란?
+
+이더리움에서 **"토큰이 지켜야 하는 공통 규격(인터페이스)"**. 신용카드 결제 표준처럼, 이 규격을 따르면 거래소/지갑(MetaMask)/DEX가 자동으로 그 토큰을 이해함.
+
+필수 함수/값:
+
+```solidity
+totalSupply()                      // 총 발행량
+balanceOf(address)                 // 특정 주소 잔액 조회
+transfer(to, amount)               // 전송
+approve(spender, amount)           // "이 사람이 내 토큰 n개까지 가져가도 됨" 승인
+transferFrom(from, to, amount)     // 승인받은 사람이 대신 전송 (DEX가 이걸로 작동)
+allowance(owner, spender)          // 승인된 한도 조회
+```
+
+- DEX에서 "토큰 승인(Approve)" 트랜잭션을 한 번 하는 이유 = `approve` + `transferFrom` 구조 때문.
+- 다른 체인 표준: BSC는 **BEP-20**, 트론은 **TRC-20** — 거의 동일 구조.
+- NFT는 **ERC-721**, 혼합형은 **ERC-1155**.
+
+---
+
+## 3. 체인 선택 — EVM 계열 vs 솔라나
+
+### EVM 호환 체인 (Ethereum, Polygon, Arbitrum, BSC, Base 등)
+
+- 모두 **EVM(이더리움 가상머신)** 규격을 따름 → **같은 Solidity 코드, 같은 ERC-20, 같은 OpenZeppelin 라이브러리**가 수정 없이 그대로 동작.
+- 이더리움에서 "먼저 연습"해야 할 필요 없음. 처음부터 Polygon이나 Arbitrum에 바로 가도 됨.
+- 바뀌는 건 "어떤 네트워크(RPC)에 배포하느냐"뿐.
+
+### 솔라나는 완전히 다른 스택
+
+- EVM이 아님. 언어도 **Rust**(+Anchor 프레임워크), 토큰 표준도 **SPL Token**으로 완전히 별개.
+- ERC-20 지식이 재활용되지 않음 — 처음부터 새로 배워야 하는 영역.
+
+### "코드 호환"과 "네트워크 호환"은 다른 개념
+
+- **코드 레벨**: Polygon Amoy, Sepolia, Arbitrum Sepolia 전부 EVM 호환이라 같은 컨트랙트 코드가 그대로 돌아감.
+- **네트워크/상태 레벨**: 완전히 별개. Amoy에 배포한 컨트랙트는 Sepolia에서 안 보임. 가스 토큰도 독립적 (Amoy=POL, Sepolia=ETH).
+- 비유: "같은 언어로 짓는 건물이지만, 완전히 다른 동네에 짓는 것."
+
+---
+
+## 4. 테스트넷이 뭐길래
+
+- Sepolia = 이더리움의 테스트넷
+- Polygon Amoy = 폴리곤의 테스트넷 (예전 Mumbai 폐지 후 교체)
+- Arbitrum Sepolia = 아비트럼(L2)의 테스트넷. 이름에 Sepolia가 들어가는 이유: Arbitrum이 L2라서 이더리움(L1)의 Sepolia를 기반으로 돌기 때문.
+
+### 테스트넷도 "진짜" 네트워크다
+
+- 실제 밸리데이터, 실제 합의 알고리즘, 실제 블록 생성, 실제 EVM 실행 — 전부 진짜로 동작함. 시뮬레이션이 아님.
+- 다른 점 두 가지뿐:
+  1. 가스 토큰에 **실질 화폐 가치가 없음** (거래소 상장 X, faucet으로 공짜 수령)
+  2. **영속성 보장이 없음** — 운영팀이 종료하면 통째로 사라짐. 실제로 Ropsten, Rinkeby, Kovan, Goerli, Mumbai 전부 서비스 종료되어 폐기된 적 있음.
+- 테스트넷 가스비 = "돈이 드는 게 아니라 토큰이 드는 것". 테스트 토큰은 화폐가치 0원이라 faucet에서 공짜로 받으면 그걸로 끝.
+
+---
+
+## 5. Hardhat과 OpenZeppelin의 역할
+
+Solidity는 "언어", 나머지는 "도구"라는 걸 구분하는 게 핵심.
+
+| 자바 생태계 | 블록체인 생태계 | 역할 |
+|---|---|---|
+| Java | **Solidity** | 코드를 작성하는 언어 |
+| Gradle / Maven | **Hardhat** | 컴파일, 의존성 관리, 테스트 실행, 빌드/배포 자동화 |
+| IntelliJ | VSCode + Solidity 확장 | 코드를 "쓰는" 에디터 (Hardhat은 이 역할 없음) |
+| 내장 Tomcat (Spring Boot) | **Hardhat Network** | `npx hardhat node` 하면 로컬에 즉석으로 가상 블록체인 서버를 띄워줌 |
+| Spring Security | **OpenZeppelin** | 검증된(audited) 재사용 코드. ERC20, Ownable, Pausable 등을 `extends`처럼 상속해서 씀 |
+| Apache Commons (라이브러리 의존성) | OpenZeppelin (npm 패키지) | 직접 짜지 않고 검증된 구현을 가져다 씀 |
+
+### Hardhat = Gradle + (Spring Boot가 내장 Tomcat 띄우는 것처럼) 로컬 서버
+
+- `./gradlew bootRun`이 내장 Tomcat을 띄우는 것처럼, `npx hardhat node`가 로컬 가상 블록체인(Hardhat Network)을 띄움.
+
+### OpenZeppelin이 중요한 이유
+
+- 웹 서비스는 버그 나면 핫픽스 배포하면 되지만, **블록체인에 배포된 컨트랙트는 수정 불가능(immutable)**. 버그 = 실제 돈 탈취로 직결.
+- 그래서 "직접 짜지 말고 이미 검증된 코드를 가져다 쓴다"는 원칙이 웹 개발보다 훨씬 엄격함.
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract MyToken is ERC20 {   // 자바의 extends와 동일한 개념
+    constructor() ERC20("MyToken", "MTK") {
+        _mint(msg.sender, 1000000);
+    }
+}
+```
+
+---
+
+## 6. 로컬 Hardhat Network vs 퍼블릭 테스트넷 vs 메인넷
+
+| | 로컬 Hardhat Network | 퍼블릭 테스트넷 (Sepolia, Amoy) | 메인넷 |
+|---|---|---|---|
+| 돌리는 주체 | 내 컴퓨터 메모리 | 전세계 공유 노드 | 전세계 공유 노드 |
+| 서버 꺼지면? | **전부 휘발** (상태 초기화) | 내가 꺼도 네트워크는 계속 살아있음 | 계속 살아있음 |
+| 돈 | 가짜, 매번 자동 충전 | 가짜, faucet으로 받음 | 진짜 |
+| 용도 | 수백 번 반복 테스트 (연습장) | "진짜 네트워크 감각" 익히기 | 실제 서비스 |
+
+개발 흐름: 로컬(무한 반복) → 퍼블릭 테스트넷(진짜 네트워크 리허설) → 메인넷(실전).
+
+---
+
+## 7. 실제로 만든 프로젝트 구조 (`token/`)
+
+```
+token/
+├── contracts/MyToken.sol      # 고정 발행량 ERC-20 토큰 (OpenZeppelin 상속)
+├── test/MyToken.test.js       # 로컬 가상 체인에서 돌리는 테스트 (5개, 전부 통과)
+├── scripts/deploy.js          # 실제 네트워크 배포 스크립트
+├── hardhat.config.js          # Amoy / Sepolia / Arbitrum Sepolia 네트워크 설정
+├── .env.example                # 개인키·RPC 주소 템플릿
+└── .gitignore                  # node_modules, .env, 빌드 산출물 제외
+```
+
+- **버전**: Hardhat 2.29.1 (v3는 아직 생태계/자료가 적어서 LTS인 v2 선택) + hardhat-toolbox 5.0.0 + OpenZeppelin 5.6.1
+- `MyToken.sol`은 생성자에서 지정한 수량을 배포자에게 한 번만 발행하고, **그 이후 추가 민팅 함수가 없음** → 구조적으로 러그풀(몰래 추가 발행) 위험이 없는 가장 단순/안전한 형태.
+
+---
+
+## 8. 로컬에서 직접 돌려보기 (손으로 실습)
+
+### 터미널 1 — 로컬 노드 띄우기 (계속 켜두기)
+
+```bash
+cd token
+npm run node
+```
+
+- 테스트 계정 20개 + 각 개인키가 출력됨. 각 계정엔 가짜 ETH 10000개가 미리 채워져 있음.
+- `http://127.0.0.1:8545`에서 계속 돌아감.
+
+### 터미널 2 — 그 노드에 배포
+
+```bash
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+- `--network localhost`를 꼭 붙여야 터미널 1의 노드에 배포됨 (안 붙이면 명령 끝나자마자 사라지는 임시 체인에 배포됨).
+
+### MetaMask 연결
+
+1. 네트워크 추가: 이름 `Localhost 8545`, RPC `http://127.0.0.1:8545`, 체인ID `31337`, 통화 `ETH`
+2. 터미널 1의 `Account #0` 개인키를 "개인 키 가져오기"로 MetaMask에 추가
+3. 배포된 컨트랙트 주소를 "토큰 추가"로 등록 → MTK 잔액 확인
+
+---
+
+## 9. 자주 나온 질문들 Q&A
+
+### Q. 테스트 계정 20개는 OpenZeppelin이 만든 건가?
+
+**아니다.** OpenZeppelin은 컨트랙트 코드 라이브러리일 뿐 계정/네트워크 생성 기능이 없음. 이 계정 20개는 **Hardhat**이 내부에 고정된 **니모닉(mnemonic)**을 가지고 BIP-44 방식으로 파생시킨 것. 전 세계 모든 Hardhat 사용자에게 완전히 동일한 주소/개인키가 나옴 (그래서 절대 실제 자산용으로 쓰면 안 됨 — 누구나 아는 키).
+
+### Q. 31337은 뭔가?
+
+**체인 ID** — 네트워크를 구분하는 고유 번호 (거래소 출금 시 "네트워크 선택"의 내부 식별자와 같은 개념). EIP-155로 "이 서명은 이 체인에서만 유효하다"를 강제해서 리플레이 공격을 막는 용도. 31337은 Hardhat이 정한 기본값으로, 해커 은어 "1337(leet)"에서 따온 장난스러운 숫자.
+
+주요 체인ID: Ethereum=1, Sepolia=11155111, Polygon=137, Amoy=80002, Arbitrum One=42161.
+
+### Q. 왜 항상 Account #0이 배포하나?
+
+`scripts/deploy.js`의 `const [deployer] = await ethers.getSigners();`가 "배열의 첫 번째 계정을 쓴다"고 스크립트에서 정한 것. 로컬 네트워크에서 그 첫 번째가 항상 Account #0인 이유는 니모닉 파생 순서가 고정이기 때문. **원하면 `signers[1]`처럼 바꿀 수 있음.**
+
+중요: 이건 로컬/localhost에만 있는 개념. Amoy/Sepolia 등 실제 네트워크 설정(`accounts: [PRIVATE_KEY]`)에는 계정이 `.env`의 개인키 딱 하나뿐이라 "Account #0"이라는 공용 데모 계정과는 무관함.
+
+### Q. Account #0이 전체 발행량을 가지고 있는데, 이걸 "민팅 풀"이라고 봐야 하나?
+
+**아니다.** "풀(Pool)"은 DEX의 **유동성 풀**(예: Uniswap MTK/ETH 풀)을 가리키는 별개 개념. 지금 상태는 그냥 "배포자 개인 지갑(EOA)이 전체 발행량을 들고 있는 것"이고, 정확한 표현은 **트레저리(treasury) / 제네시스 홀더(genesis holder)**.
+
+또한 `MyToken.sol`은 생성자에서 딱 한 번만 민팅하고 추가 민팅 함수가 없어서, "계속 채워지는 풀"이라는 뉘앙스와도 다름 — 이미 다 찍혀서 고정된 상태.
+
+Account #1한테 넘기는 두 가지 방법:
+1. 단순 전송 (`transfer`) — 지갑 대 지갑 이동
+2. 실제 DEX 풀 생성 — MTK+ETH를 Uniswap 풀 컨트랙트에 예치 → 그때부터 비로소 "풀"
+
+### Q. 실제 프로젝트에서 제네시스 홀더가 사람 지갑이 아니라 "어떤 주소"에 들어있던데, 그게 뭔가?
+
+EOA(개인 지갑) vs **컨트랙트 주소**의 구분이 핵심. 실제로 많이 쓰이는 컨트랙트 주소들:
+
+| 용도 | 들어있는 것 | 이유 |
+|---|---|---|
+| 베스팅(Vesting) 컨트랙트 | 팀/투자자 몫 | 몇 년에 걸쳐 조금씩만 풀리게 코드로 강제 (급매 방지) |
+| 멀티시그(Gnosis Safe 등) | 팀 트레저리 | "N명 중 M명 서명해야 이동" — 한 명이 들고 도망 못 치게 |
+| 유동성 풀 컨트랙트 | DEX 거래 물량 | 거래소 기능을 하는 풀 자체도 결국 컨트랙트 주소 |
+| 타임락 / DAO 트레저리 | 거버넌스 자금 | 투표 + 지연 실행으로 급발진 방지 |
+| 소각(Burn) 주소 (`0x000...dead`) | 영구 제거 물량 | 개인키가 없는 주소로 보내서 "복구 불가"를 증명 |
+
+→ 탑 홀더가 사람 지갑(EOA)이고 베스팅도 없으면 러그풀 위험 신호, 베스팅/멀티시그 컨트랙트면 상대적으로 안전 — 투자 전 체크포인트로 실제로 쓰이는 로직.
+
+### Q. 로컬 노드를 끄면 MetaMask에 등록해둔 네트워크/계정은 어떻게 되나?
+
+- **영구 저장되는 것**: 네트워크 설정(RPC, 체인ID), 가져온 계정(개인키) — 노드가 꺼져도 안 지워짐.
+- **노드가 꺼진 동안**: MetaMask가 RPC에 접속 실패 → 마지막 캐시된 잔액을 보여주거나 로딩이 멈춤.
+- **노드를 다시 켜면**: 완전히 새 체인(블록 0)이 생성됨. Account 주소는 니모닉이 고정이라 그대로 나오지만, **이전에 배포했던 컨트랙트와 토큰 잔액은 전부 사라짐** (재배포 필요).
+- **흔한 함정**: MetaMask가 캐싱해둔 nonce와 리셋된 체인의 nonce(0부터 시작)가 안 맞아 "nonce too high" 에러 발생 가능 → 설정 → 고급 → "계정 재설정"으로 해결 (자산 삭제 아니고 로컬 캐시만 초기화).
+
+---
+
+## 다음에 해볼 것 (아이디어 메모)
+
+- [ ] Account #0 → Account #1로 `transfer` 직접 실행해보기
+- [ ] Polygon Amoy 테스트넷에 실제 배포 + faucet 받기 + Polygonscan에서 확인
+- [ ] OpenZeppelin `VestingWallet`로 베스팅 걸어보기
+- [ ] Uniswap에 MTK/ETH 유동성 풀 실제로 만들어보기
+- [ ] Gnosis Safe 멀티시그 지갑 체험해보기

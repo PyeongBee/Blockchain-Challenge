@@ -1,0 +1,12 @@
+# 의존성
+*/node_modules
+
+# Hardhat 빌드 산출물 (언제든 다시 생성 가능하므로 git에 안 올림)
+*/cache
+*/artifacts
+
+# IDE
+.vscode
+
+# 환경 변수
+.env
