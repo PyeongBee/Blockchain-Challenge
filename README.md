@@ -17,3 +17,10 @@ npm run test          # Hardhat Network(가상 체인)에서 테스트 실행
 # 토큰 배포
 hardhat run scripts/deploy.js --network localhost
 ```
+
+### 탐색기
+```sh
+cd explorer
+npm install   # 처음 한 번만
+npm run dev   # http://localhost:5173 (노드 실행 + 토큰 배포 후)
+```
