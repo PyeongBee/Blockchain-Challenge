@@ -15,7 +15,10 @@ npm run test          # Hardhat Network(가상 체인)에서 테스트 실행
 ### 스크립트
 ```sh
 # 토큰 배포
-hardhat run scripts/deploy.js --network localhost
+npm run deploy:localhost # hardhat run scripts/deploy.js --network localhost
+
+# 송금
+npm run transfer:localhost # hardhat run scripts/transfer.js --network localhost
 ```
 
 ### 탐색기

@@ -8,6 +8,11 @@
     "node": "hardhat node",
     "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
     "transfer:localhost": "hardhat run scripts/transfer.js --network localhost",
+    "inspect:localhost": "hardhat run scripts/inspectTx.js --network localhost",
+    "sign:localhost": "hardhat run scripts/signTx.js --network localhost",
+    "broadcast:localhost": "hardhat run scripts/broadcastTx.js --network localhost",
+    "sign:token:localhost": "hardhat run scripts/signTokenTx.js --network localhost",
+    "broadcast:token:localhost": "hardhat run scripts/broadcastTokenTx.js --network localhost",
     "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "deploy:arbitrumSepolia": "hardhat run scripts/deploy.js --network arbitrumSepolia"

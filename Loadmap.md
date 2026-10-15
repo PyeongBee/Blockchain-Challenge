@@ -519,3 +519,5 @@ Blockchain-Challenge/
 ## 스터디 노트
 
 - [study1.md](docs/study1.md) — 코인 vs 토큰, ERC-20, EVM 체인, 테스트넷, Hardhat/OpenZeppelin, 로컬 실습 Q&A
+- [study2.md](docs/study2.md) — Step 1-1: ethers/HRE 바인딩, 컨트랙트는 이름이 아니라 주소로 식별됨, deploy/transfer 분리, data 필드와 가스비
+- [study3.md](docs/study3.md) — Step 1-2: tx/receipt 필드, data 디코딩, 서명·전송 분리(ETH·MTK), nonce 충돌 재현, gas vs fee
